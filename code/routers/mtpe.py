@@ -11,7 +11,7 @@ from typing import List
 # from huggingface_hub import snapshot_download
 from comet import load_from_checkpoint
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException  # , status
+from fastapi import APIRouter, Header, HTTPException  # , status
 from huggingface_hub import login
 
 # from comet import download_model, load_from_checkpoint
@@ -19,6 +19,7 @@ from huggingface_hub import login
 
 
 load_dotenv()
+AUTH_KEY = os.environ.get("AUTH_KEY")
 custom_hf_cache_dpath = os.getenv("HF_HOME")
 # HF_HOME = os.getenv("HF_HOME")
 # HF_HOME = os.environ["HF_HOME"]
@@ -72,7 +73,15 @@ def add_scores_to_data(data, scores):
 
 
 @router.get("/scores")
-async def get_scores(translations: List[Translation], model: str, mode: str = "mock"):
+async def get_scores(
+    translations: List[Translation],
+    model: str = "Unbabel/wmt22-cometkiwi-da",
+    mode: str = "mock",
+    authorization: str = Header(None),  # extracts 'Authorization' header
+):
+    if not authorization or authorization != f"Bearer {AUTH_KEY}":
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
     if mode == "mock":
         scores = produce_scores_mock(translations)
     else:
